@@ -843,6 +843,12 @@ class AlbertConverter(SpmConverter):
             for piece in proto.pieces
         ]
 
+    @classmethod
+    def convert_from_spm(cls, vocab=None, **kwargs):
+        if vocab is not None:
+            kwargs["vocab"] = [(piece, score if check_number_comma(piece) else score - 100) for piece, score in vocab]
+        return kwargs
+
     def normalizer(self, proto):
         list_normalizers = [
             normalizers.Replace("``", '"'),
@@ -1217,6 +1223,12 @@ class XLNetConverter(SpmConverter):
             (piece.piece, piece.score) if check_number_comma(piece.piece) else (piece.piece, piece.score - 100)
             for piece in proto.pieces
         ]
+
+    @classmethod
+    def convert_from_spm(cls, vocab=None, **kwargs):
+        if vocab is not None:
+            kwargs["vocab"] = [(piece, score if check_number_comma(piece) else score - 100) for piece, score in vocab]
+        return kwargs
 
     def normalizer(self, proto):
         list_normalizers = [

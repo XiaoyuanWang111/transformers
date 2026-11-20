@@ -1,10 +1,11 @@
 import json
+import shutil
 import tempfile
 import unittest
 import warnings
 from dataclasses import dataclass
 
-from transformers import AutoTokenizer, TokenizersBackend
+from transformers import AlbertTokenizer, AutoTokenizer, TokenizersBackend
 from transformers.convert_slow_tokenizer import SentencePieceExtractor, SpmConverter
 from transformers.testing_utils import get_tests_dir, require_sentencepiece, require_tokenizers
 from transformers.utils import is_sentencepiece_available
@@ -189,3 +190,12 @@ class SentencePieceModelConversionTest(unittest.TestCase):
             tokenizer = TokenizersBackend.from_pretrained(tmp_dir)
             self.assertEqual(tokenizer.convert_tokens_to_ids(["<a>", "<b>"]), [b_id, a_id])
             self.assertEqual(tokenizer.encode("<a>x<b>", add_special_tokens=False)[::2], [b_id, a_id])
+
+    def test_albert_number_comma_pieces(self):
+        # Like `AlbertConverter.vocab`, a bare spiece.model must keep a number apart from the comma after it
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            shutil.copy(get_tests_dir("fixtures/spiece.model"), f"{tmp_dir}/spiece.model")
+            tokenizer = AlbertTokenizer.from_pretrained(tmp_dir)
+            self.assertEqual(
+                tokenizer.tokenize("june 21, 1995, and 9,"), ["▁june", "▁21", ",", "▁1995", ",", "▁and", "▁9", ","]
+            )
