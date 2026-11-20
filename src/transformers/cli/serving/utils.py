@@ -239,7 +239,9 @@ _RESPONSE_TEMPLATE_FALLBACKS = {
                 "repeats": True,
                 "content": "xml-inline",
                 "content_args": {
-                    "tag_pattern": r"<parameter=(?P<key>[^>\n]+)>\s*(?P<value>.*?)\s*</parameter>",
+                    # The chat template writes "<parameter=KEY>\nVALUE\n</parameter>": drop only those two newlines,
+                    # so a value keeps its own indentation and trailing newlines (code, file contents)
+                    "tag_pattern": r"<parameter=(?P<key>[^>\n]+)>\n?(?P<value>.*?)\n?</parameter>",
                 },
                 "transform": {"type": "function", "function": {"name": "{name}", "arguments": "{content}"}},
             },

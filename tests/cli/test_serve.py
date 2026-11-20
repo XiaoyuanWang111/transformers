@@ -2140,6 +2140,26 @@ class TestToolCallUnit(unittest.TestCase):
             self.assertEqual(message["content"], "Checking two cities.")
             self.assertEqual(len(message["tool_calls"]), 2)
 
+    def test_qwen3_5_tool_call_keeps_argument_whitespace(self):
+        """The Qwen 3.5 chat template writes each parameter value between two newlines. Parsing must drop only
+        those, not the indentation or trailing newline of a code argument."""
+        template = next(v for k, v in _RESPONSE_TEMPLATE_FALLBACKS.items() if "qwen3_5" in k)
+        # As the chat template renders {"path": "app.py", "old_str": "    return x\n", "new_str": "    return x + 1\n"}
+        gen = (
+            "<tool_call>\n<function=str_replace>\n"
+            "<parameter=path>\napp.py\n</parameter>\n"
+            "<parameter=old_str>\n    return x\n\n</parameter>\n"
+            "<parameter=new_str>\n    return x + 1\n\n</parameter>\n"
+            "</function>\n</tool_call><|im_end|>"
+        )
+        parser = ResponseParser(template, prefix="")
+        parser.feed(gen)
+        message, _ = parser.finalize()
+        self.assertEqual(
+            message["tool_calls"][0]["function"]["arguments"],
+            {"path": "app.py", "old_str": "    return x\n", "new_str": "    return x + 1\n"},
+        )
+
 
 class TestCBWorkerDeadServerIntegration(unittest.TestCase):
     """End-to-end FastAPI behavior when the CB worker has died.
