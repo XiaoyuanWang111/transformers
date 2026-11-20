@@ -73,10 +73,12 @@ def _json(text: str, args: dict) -> Any:
 
     if unquoted_keys:
         # The first alternative swallows whole quoted strings (escapes included) and puts them back untouched,
-        # so that key-like text inside a string value is never rewritten. Only the second one is a bare key.
+        # so that key-like text inside a string value is never rewritten. Only the second one is a bare key: the
+        # text up to the colon, minus JSON punctuation and pre-extracted strings, since keys from tool schemas and
+        # user data can look like `Content-Type`, `$gt` or `First Name`.
         working = re.sub(
-            r'"(?:\\.|[^"\\])*"|(?<=[{,])(\s*)(\w+)(\s*):',
-            lambda m: m.group(0) if m.group(2) is None else f'{m.group(1)}"{m.group(2)}"{m.group(3)}:',
+            r'"(?:\\.|[^"\\])*"|(?<=[{,])(\s*)([^\s"{}\[\],:\x01\x02](?:[^"{}\[\],:\x01\x02]*[^\s"{}\[\],:\x01\x02])?)(\s*):',
+            lambda m: m.group(0) if m.group(2) is None else f"{m.group(1)}{json.dumps(m.group(2))}{m.group(3)}:",
             working,
         )
 

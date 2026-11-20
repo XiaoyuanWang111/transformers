@@ -1522,6 +1522,24 @@ class ResponseEventStreamTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(parse_content(text, "json", args), expected)
 
+    def test_unquoted_keys_allows_symbols_and_spaces_in_keys(self):
+        """Gemma 4 writes every key of the tool-call arguments bare, nested ones included, and those keys come from
+        tool schemas and user data. Keys like `$gt`, `First Name` or `Content-Type` must be quoted too."""
+        # As Gemma 4's chat template renders these two calls
+        model_out = (
+            '<|tool_call>call:find{collection:<|"|>users<|"|>,filter:{age:{$gt:30},First Name:<|"|>Ada<|"|>}}'
+            '<tool_call|><|tool_call>call:http_request{headers:{Content-Type:<|"|>application/json<|"|>},'
+            'url:<|"|>https://api.example.com/items<|"|>}<tool_call|><|tool_response>'
+        )
+        tool_calls = parse_response(model_out, gemma4_template, prefix="")["tool_calls"]
+        self.assertEqual(
+            [call["function"]["arguments"] for call in tool_calls],
+            [
+                {"collection": "users", "filter": {"age": {"$gt": 30}, "First Name": "Ada"}},
+                {"headers": {"Content-Type": "application/json"}, "url": "https://api.example.com/items"},
+            ],
+        )
+
 
 class PrefixAndTruncationTest(unittest.TestCase):
     def test_prefix_lands_inside_explicit_region(self):
