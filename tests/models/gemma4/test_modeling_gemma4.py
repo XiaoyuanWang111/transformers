@@ -364,6 +364,13 @@ class Gemma4Audio2TextModelTest(ALMModelTest, unittest.TestCase):
     def test_flash_attn_2_inference_equivalence_right_padding(self):
         pass
 
+    @unittest.skip(
+        "`audio_outputs.attention_mask` is a bool tensor, and the common test subtracts the outputs to build its "
+        "failure message even when they match"
+    )
+    def test_model_outputs_equivalence(self):
+        pass
+
     def test_audio_outputs_are_returned(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
