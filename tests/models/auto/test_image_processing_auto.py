@@ -409,6 +409,20 @@ class AutoImageProcessorTest(unittest.TestCase):
             image_processor = AutoImageProcessor.from_pretrained(tmpdirname, backend="pil")
             self.assertIsInstance(image_processor, ViTImageProcessorPil)
 
+    @require_torchvision
+    def test_legacy_feature_extractor_class_name_in_config(self):
+        # Image processors saved through the removed vision feature extractor classes (e.g. `ViTFeatureExtractor`)
+        # name them in `image_processor_type`.
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            processor_tmpfile = Path(tmpdirname) / "preprocessor_config.json"
+            json.dump({"image_processor_type": "ViTFeatureExtractor"}, open(processor_tmpfile, "w", encoding="utf-8"))
+
+            image_processor = AutoImageProcessor.from_pretrained(tmpdirname, backend="torchvision")
+            self.assertIsInstance(image_processor, ViTImageProcessor)
+
+            image_processor = AutoImageProcessor.from_pretrained(tmpdirname, backend="pil")
+            self.assertIsInstance(image_processor, ViTImageProcessorPil)
+
     def test_unavailable_backend_error_mentions_missing_dependency(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
             processor_tmpfile = Path(tmpdirname) / "preprocessor_config.json"

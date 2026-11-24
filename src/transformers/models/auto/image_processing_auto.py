@@ -649,6 +649,10 @@ class AutoImageProcessor:
                 feature_extractor_auto_map = config_dict["auto_map"]["AutoFeatureExtractor"]
                 image_processor_auto_map = feature_extractor_auto_map.replace("FeatureExtractor", "ImageProcessor")
 
+        # Backward compat: image processors saved with the removed vision `XXXFeatureExtractor` classes
+        if image_processor_type is not None and image_processor_type.endswith("FeatureExtractor"):
+            image_processor_type = image_processor_type.replace("FeatureExtractor", "ImageProcessor")
+
         # If not in image processor config, try the model config
         if image_processor_type is None:
             try:
