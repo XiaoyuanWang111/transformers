@@ -517,6 +517,13 @@ class WhisperTokenizer(TokenizersBackend):
 
         # retrieve offsets
         if output_offsets:
+            token_ids = to_py_obj(token_ids)
+            if isinstance(token_ids, list) and token_ids and isinstance(token_ids[0], list):
+                # batched input: one result per sequence, as for a single sequence
+                return [
+                    {"text": seq_text, "offsets": self._compute_offsets(seq, time_precision=time_precision)}
+                    for seq, seq_text in zip(token_ids, text)
+                ]
             offsets = self._compute_offsets(token_ids, time_precision=time_precision)
             return {"text": text, "offsets": offsets}
         return text

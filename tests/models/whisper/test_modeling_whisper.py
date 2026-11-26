@@ -1599,16 +1599,52 @@ class WhisperModelIntegrationTests(unittest.TestCase):
 
         torch.testing.assert_close(generated_ids, EXPECTED_OUTPUT)
 
-        EXPECTED_TRANSCRIPT = {
-            "text": [
-                " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is"
-                " Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season"
-                " of the year, with Christmas and roast beef looming before us, similarly drawn from eating and"
-                " its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins'"
-                " work is really Greek after all, and can discover."
-            ],
-            "offsets": [],
-        }
+        EXPECTED_TRANSCRIPT = [
+            {
+                "text": (
+                    " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is"
+                    " Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season"
+                    " of the year, with Christmas and roast beef looming before us, similarly drawn from eating and"
+                    " its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins'"
+                    " work is really Greek after all, and can discover."
+                ),
+                "offsets": [
+                    {
+                        "text": (
+                            " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
+                        ),
+                        "timestamp": (0.0, 6.5600000000000005),
+                    },
+                    {
+                        "text": " Nor is Mr. Quilter's manner less interesting than his matter.",
+                        "timestamp": (6.5600000000000005, 11.24),
+                    },
+                    {
+                        "text": (
+                            " He tells us that at this festive season of the year, with Christmas and roast beef"
+                            " looming"
+                        ),
+                        "timestamp": (11.24, 16.88),
+                    },
+                    {
+                        "text": (
+                            " before us, similarly drawn from eating and its results occur most readily to the mind."
+                        ),
+                        "timestamp": (16.88, 23.76),
+                    },
+                    {
+                        "text": (
+                            " He has grave doubts whether Sir Frederick Latins' work is really Greek after all, and"
+                        ),
+                        "timestamp": (23.76, 29.44),
+                    },
+                    {
+                        "text": " can discover.",
+                        "timestamp": (29.44, 32.44),
+                    },
+                ],
+            }
+        ]
 
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True, output_offsets=True)
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
@@ -1880,7 +1916,7 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         ).get_expectation()
 
         transcript = processor.batch_decode(generated_ids["sequences"], skip_special_tokens=True, output_offsets=True)
-        self.assertEqual(transcript["offsets"], [])
+        self.assertEqual(transcript[0]["offsets"], expected_output)
 
         transcript_segments = [
             {
@@ -1917,7 +1953,49 @@ class WhisperModelIntegrationTests(unittest.TestCase):
         # fmt: on
         torch.testing.assert_close(generated_ids, EXPECTED_OUTPUT)
 
-        EXPECTED_TRANSCRIPT = {"text": [" Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season of the year, with Christmas and roast beef looming before us, similes drawn from eating and its results occur most readily to the mind. He has grave doubts whether Sir Frederick Leighton's work is really Greek after all, and can discover"], "offsets": []}  # fmt: skip
+        EXPECTED_TRANSCRIPT = [
+            {
+                "text": (
+                    " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
+                    " Nor is Mr. Quilter's manner less interesting than his matter. He tells us that at this festive"
+                    " season of the year, with Christmas and roast beef looming before us, similes drawn from eating"
+                    " and its results occur most readily to the mind. He has grave doubts whether Sir Frederick "
+                    "Leighton's work is really Greek after all, and can discover"
+                ),
+                "offsets": [
+                    {
+                        "text": (
+                            " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
+                        ),
+                        "timestamp": (0.0, 5.28),
+                    },
+                    {
+                        "text": " Nor is Mr. Quilter's manner less interesting than his matter.",
+                        "timestamp": (6.34, 10.1),
+                    },
+                    {
+                        "text": (
+                            " He tells us that at this festive season of the year, with Christmas and roast beef looming before us,"
+                        ),
+                        "timestamp": (10.92, 17.6),
+                    },
+                    {
+                        "text": (" similes drawn from eating and its results occur most readily to the mind."),
+                        "timestamp": (18.44, 22.580000000000002),
+                    },
+                    {
+                        "text": (
+                            " He has grave doubts whether Sir Frederick Leighton's work is really Greek after all,"
+                        ),
+                        "timestamp": (23.16, 28.68),
+                    },
+                    {
+                        "text": (" and can discover"),
+                        "timestamp": (28.68, 30.0),
+                    },
+                ],
+            }
+        ]
 
         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True, output_offsets=True)
         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)

@@ -144,6 +144,17 @@ class WhisperTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
             },
         )
 
+    def test_batch_decode_output_offsets(self):
+        tokenizer = self.get_tokenizer()
+        sequences = [
+            [51492, 406, 3163, 1953, 466, 13, 51612, 51612],
+            [50364, 295, 6177, 3391, 11, 19817, 3337, 507, 307, 406, 3163, 1953, 466, 13, 50614, 50614, 2812, 9836, 14783, 390, 6263, 538, 257, 1359, 11, 8199, 6327, 1090, 322, 702, 7443, 13, 50834, 50257],
+        ]  # fmt: skip
+        expected = [tokenizer.decode(sequence, output_offsets=True) for sequence in sequences]
+        self.assertEqual(tokenizer.batch_decode(sequences, output_offsets=True), expected)
+        self.assertEqual(tokenizer.batch_decode(sequences[:1], output_offsets=True), expected[:1])
+        self.assertEqual(tokenizer.batch_decode(np.array(sequences[1:]), output_offsets=True), expected[1:])
+
     def test_find_longest_common_subsequence(self):
         previous_sequence = [1, 2, 3]
         next_sequence = [2, 3, 4, 5]
