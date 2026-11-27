@@ -148,6 +148,12 @@ class TokenizersBackend(PreTrainedTokenizerBase):
             else:
                 tok_from_file = TokenizerFast.from_file(fast_tokenizer_file)
 
+            # The class would rebuild its own model from the vocab, so a tokenizer.json with another model (for
+            # example a Unigram file under a BPE class) is loaded as is
+            if cls.model is not None and not isinstance(tok_from_file.model, cls.model):
+                local_kwargs["tokenizer_file"] = fast_tokenizer_file
+                return local_kwargs
+
             local_kwargs["post_processor"] = tok_from_file.post_processor
             local_kwargs["tokenizer_padding"] = tok_from_file.padding
             local_kwargs["tokenizer_truncation"] = tok_from_file.truncation

@@ -21,7 +21,7 @@ import tempfile
 import unittest
 
 from tokenizers import Tokenizer, decoders, pre_tokenizers, trainers
-from tokenizers.models import BPE, WordLevel
+from tokenizers.models import BPE, Unigram, WordLevel
 
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 from transformers.testing_utils import require_tiktoken, require_tokenizers
@@ -217,6 +217,20 @@ class PreTrainedTokenizationFastTest(unittest.TestCase):
 
             tokenizer = AutoTokenizer.from_pretrained(temp_dir, use_fast=True)
             self.assertIsInstance(tokenizer, PreTrainedTokenizerFast)
+
+    def test_tokenizer_json_with_another_model_than_the_class(self):
+        # e.g. a Unigram tokenizer.json with `"tokenizer_class": "RobertaTokenizer"`, where `RobertaTokenizer` builds BPE
+        from transformers import CamembertTokenizer, RobertaTokenizer
+
+        unigram = Tokenizer(Unigram([("<unk>", 0.0), ("▁hello", -1.0), ("▁world", -1.0)], unk_id=0))
+        unigram.pre_tokenizer = pre_tokenizers.Metaspace()
+        bpe = Tokenizer.from_file(os.path.join(self.bytelevel_bpe_model_name, "tokenizer.json"))
+        for backend, tokenizer_class in [(unigram, RobertaTokenizer), (bpe, CamembertTokenizer)]:
+            with self.subTest(tokenizer_class.__name__), tempfile.TemporaryDirectory() as tmp_dir:
+                backend.save(os.path.join(tmp_dir, "tokenizer.json"))
+                tokenizer = tokenizer_class.from_pretrained(tmp_dir)
+                text = "hello world"
+                self.assertEqual(tokenizer.encode(text, add_special_tokens=False), backend.encode(text).ids)
 
     def test_bpe_tokenizer_skips_clean_up_tokenization_spaces(self):
         """BPE tokenizers should not apply clean_up_tokenization even when the flag is True.
