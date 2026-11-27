@@ -139,6 +139,7 @@ class LlamaTokenizer(TokenizersBackend):
             eos_token=eos_token,
             use_default_system_prompt=use_default_system_prompt,
             add_prefix_space=add_prefix_space,
+            legacy=legacy,
             **kwargs,
         )
 

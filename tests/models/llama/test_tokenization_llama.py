@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 from tests.test_tokenization_common import TokenizerTesterMixin
@@ -37,6 +38,17 @@ class LlamaTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
     def get_tokenizers(self, **kwargs):
         kwargs.setdefault("pad_token", "<PAD>")
         return super().get_tokenizers(**kwargs)
+
+    def test_legacy_is_kept_after_save_and_reload(self):
+        # `legacy` decides whether text after a special token gets the "▁" prefix
+        text = "hi<s>there"
+        for legacy, expected in [(True, ["▁hi", "<s>", "▁there"]), (False, ["▁hi", "<s>", "there"])]:
+            with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as tmp_dir:
+                tokenizer = LlamaTokenizer.from_pretrained("hf-internal-testing/llama-tokenizer", legacy=legacy)
+                self.assertEqual(tokenizer.tokenize(text), expected)
+                tokenizer.save_pretrained(tmp_dir)
+                reloaded = AutoTokenizer.from_pretrained(tmp_dir)
+                self.assertEqual(reloaded.tokenize(text), expected)
 
     def test_load_tiktoken_tokenizer(self):
         """Test loading a Llama tokenizer from tiktoken.model file"""
