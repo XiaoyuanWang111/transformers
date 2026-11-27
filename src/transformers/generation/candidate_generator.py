@@ -295,7 +295,10 @@ class AssistedCandidateGenerator(CandidateGenerator):
         """Update past key values and attention masks for subsequent generation rounds."""
         has_cache = self.assistant_kwargs.get("cache", None) is not None
         if has_cache:
-            tokens_to_remove = remove_from_cache + num_added_tokens
+            # Remove the drafted tokens that were rejected. The cache length is tracked here because `get_seq_length()`
+            # does not work on caches with only linear attention layers
+            target_cache_size = input_ids.shape[-1] - 1 - remove_from_cache - num_added_tokens
+            tokens_to_remove = self._assistant_cache_size - target_cache_size
             if tokens_to_remove >= 0:
                 self.assistant_kwargs["cache"].crop(-tokens_to_remove)
             self.assistant_kwargs = _prepare_attention_mask(
@@ -322,6 +325,8 @@ class AssistedCandidateGenerator(CandidateGenerator):
         """Generate candidate sequences using the assistant model."""
         assistant_output = self.assistant_model.generate(**generation_args, **self.assistant_kwargs)
         self.assistant_kwargs["cache"] = assistant_output.cache
+        # The assistant ran a forward pass on every token of its output except the last one
+        self._assistant_cache_size = assistant_output.sequences.shape[-1] - 1
         if (
             is_sklearn_available()
             and self.assistant_generation_config.assistant_confidence_threshold
@@ -539,6 +544,7 @@ class AssistedCandidateGeneratorDifferentTokenizers(AssistedCandidateGenerator):
         # Update state
         self.prev_target_ids_len = input_ids.shape[1]
         self.assistant_kwargs["cache"] = assistant_output.cache
+        self._assistant_cache_size = assistant_output.sequences.shape[-1] - 1
         self.prev_assistant_ids = assistant_output.sequences
 
         if self.prev_target_ids_len >= new_target_ids.shape[1]:

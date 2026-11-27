@@ -4355,6 +4355,45 @@ class GenerationIntegrationTests(unittest.TestCase):
         # It must not crash above, and be the same here
         self.assertTrue(torch.equal(reference, assisted))
 
+    def test_assisted_decoding_several_rejected_draft_tokens(self):
+        """
+        Test that assisted decoding with a different assistant model matches greedy decoding when the main model rejects
+        several drafted tokens in a round. All the rejected tokens must be removed from the assistant's cache before it
+        drafts again.
+        """
+        config = LlamaConfig(
+            vocab_size=64,
+            hidden_size=16,
+            intermediate_size=32,
+            num_hidden_layers=2,
+            num_attention_heads=2,
+            num_key_value_heads=2,
+            head_dim=8,
+            max_position_embeddings=512,
+        )
+        set_seed(0)
+        model = LlamaForCausalLM(config).eval()
+        set_seed(1)
+        assistant = LlamaForCausalLM(config).eval()
+        # Always draft 5 tokens: with random weights, the main model rejects most of them
+        assistant.generation_config.num_assistant_tokens = 5
+        assistant.generation_config.num_assistant_tokens_schedule = "constant"
+        assistant.generation_config.assistant_confidence_threshold = 0.0
+
+        input_ids = torch.randint(1, 60, (1, 8))
+        attention_mask = torch.ones_like(input_ids)
+        reference = model.generate(
+            input_ids=input_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20
+        )
+        assisted = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            do_sample=False,
+            max_new_tokens=20,
+            assistant_model=assistant,
+        )
+        self.assertTrue(torch.equal(reference, assisted))
+
     def test_mtp_mask_creation_uses_per_layer_config(self):
         config = AutoConfig.for_model(
             "llama",
