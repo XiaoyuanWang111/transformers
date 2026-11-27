@@ -1212,7 +1212,7 @@ class PythonBackend(PreTrainedTokenizerBase):
             encoded_inputs["special_tokens_mask"] = (
                 self.get_special_tokens_mask(ids, pair_ids) if add_special_tokens else [0] * len(sequence)
             )
-        if return_overflowing_tokens and not return_tensors and overflowing_tokens:
+        if return_overflowing_tokens and not return_tensors:
             encoded_inputs["overflowing_tokens"] = overflowing_tokens
             encoded_inputs["num_truncated_tokens"] = total_len - max_length if max_length else 0
 

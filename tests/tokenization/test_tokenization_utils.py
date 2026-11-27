@@ -115,6 +115,17 @@ class TokenizerUtilsTest(unittest.TestCase):
         self.assertEqual(encoded["input_ids"][0], tokenizer("hello", "world")["input_ids"])
         self.assertEqual(encoded["input_ids"][1], tokenizer("want", "x")["input_ids"])
 
+    def test_batch_overflowing_tokens_when_only_some_sequences_overflow(self):
+        tokenizer = ProphetNetTokenizer.from_pretrained("microsoft/prophetnet-large-uncased")
+        texts = ["want hello want hello want hello", "want"]
+        kwargs = {"max_length": 4, "truncation": True, "stride": 1, "return_overflowing_tokens": True}
+
+        encoded = tokenizer(texts, **kwargs)
+        for i, text in enumerate(texts):
+            single = tokenizer(text, **kwargs)
+            for key in ("input_ids", "overflowing_tokens", "num_truncated_tokens"):
+                self.assertEqual(encoded[key][i], single[key])
+
     def test_batch_encoding_with_labels(self):
         batch = BatchEncoding({"inputs": [[1, 2, 3], [4, 5, 6]], "labels": [0, 1]})
         tensor_batch = batch.convert_to_tensors(tensor_type="np")
