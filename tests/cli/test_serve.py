@@ -2540,6 +2540,41 @@ class TestErrorResponses(unittest.TestCase):
         self.assertIsNone(request_id)  # for every API server
         self.assertIsInstance(error, EngineDeadError)
 
+    @require_torch
+    def test_continuous_batching_greedy_request_with_a_config_without_top_k(self):
+        """A greedy request is a top-k of 1 for the batching manager. A model whose generation config samples but sets no
+        top-k (as Llama 3.2 Instruct's) still answers it greedily."""
+        import torch
+
+        from transformers import GenerationConfig, Qwen2Config, Qwen2ForCausalLM
+
+        torch.manual_seed(0)
+        config = Qwen2Config(
+            vocab_size=99,
+            hidden_size=16,
+            intermediate_size=32,
+            num_hidden_layers=2,
+            num_attention_heads=2,
+            num_key_value_heads=1,
+        )
+        model = Qwen2ForCausalLM(config).eval()
+        model.generation_config = GenerationConfig(do_sample=True, temperature=0.6, top_p=0.9, eos_token_id=0)
+        input_ids = [5, 6, 7, 8, 9]
+        expected = model.generate(torch.tensor([input_ids]), max_new_tokens=10, do_sample=False)[0, 5:].tolist()
+
+        results = queue.Queue()
+        runner = CBGenerateRunner(
+            model, None, lambda ids, tokens, finished: finished and results.put(finished), cb_config=None
+        )
+        generation_kwargs = {"max_new_tokens": 10, "eos_token_id": 0, "do_sample": False, "temperature": 0.0}
+        try:
+            for request_id in range(3):
+                runner.generate(request_id, {"input_ids": input_ids}, dict(generation_kwargs), stream=False)
+                ((_, tokens),) = results.get(timeout=60)
+                self.assertEqual(tokens, expected)
+        finally:
+            runner.manager.stop(block=True, timeout=10)
+
 
 class _TestToolCallBase:
     """Base class for tool call integration tests. Subclasses set MODEL and inherit all tests."""

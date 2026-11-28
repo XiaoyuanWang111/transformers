@@ -1020,8 +1020,16 @@ class CBGenerateRunner(GenerateRunner):
         if cb_config is None:
             cb_config = ContinuousBatchingConfig()
         cb_config.per_request_processors = True  # each request sets its own temperature, top-k and top-p
+        generation_config = copy.deepcopy(model.generation_config)
+        if generation_config.do_sample and not generation_config.top_k:
+            # A greedy request is a top-k of 1 (see `_build_continuous_batching_kwargs`), which the manager can only set
+            # per request when the config has a top-k: else it would sample greedy requests. A top-k of the vocabulary
+            # size keeps every token of the other requests.
+            generation_config.top_k = model.config.get_text_config().vocab_size
         hints = WorkloadHints(max_prompt_length=context_length) if context_length else None
-        manager = model.init_continuous_batching(continuous_batching_config=cb_config, workload_hints=hints)
+        manager = model.init_continuous_batching(
+            generation_config=generation_config, continuous_batching_config=cb_config, workload_hints=hints
+        )
         manager.warmup()
         manager.start()
 
